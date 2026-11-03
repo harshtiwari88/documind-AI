@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>Harsh AI – Your Intelligent Document &amp; AI Companion</title>
+    <meta name="description" content="Harsh AI is your intelligent document companion with an advanced PDF editor, dual-mode voice editing, Gemini AI assistant, and instant PDF tools." />
+    <meta property="og:title" content="Harsh AI – Your Intelligent Document &amp; AI Companion" />
+    <meta property="og:description" content="Harsh AI is your intelligent document companion with an advanced PDF editor, dual-mode voice editing, Gemini AI assistant, and instant PDF tools." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Android & Modern Chromium Standalone / Add to Home Screen -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Harsh AI" />
+    <meta name="theme-color" content="#0b132b" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="msapplication-TileColor" content="#0b132b" />
+    <meta name="msapplication-navbutton-color" content="#0b132b" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- iOS Safari Standalone & Add to Home Screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Harsh AI" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/pwa-512x512.png" />
+
+    <!-- Standard Favicons & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Service worker registration for PWA standalone home-screen behavior & offline caching
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((registration) => {
+              console.log('Harsh AI PWA Service Worker registered with scope:', registration.scope);
+              registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                if (installingWorker) {
+                  installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed') {
+                      if (navigator.serviceWorker.controller) {
+                        console.log('Harsh AI PWA content updated. Reload to activate latest build.');
+                      } else {
+                        console.log('Harsh AI PWA is ready for offline and standalone home-screen use.');
+                      }
+                    }
+                  };
+                }
+              };
+            })
+            .catch((err) => {
+              console.warn('Harsh AI Service Worker registration failed:', err);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>

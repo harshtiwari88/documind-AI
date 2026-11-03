@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pymupdf>=1.24.2
+httpx
+pydantic>=2
+python-dotenv
+pillow
+pytesseract
+pdf2docx
+python-pptx
+openpyxl
+pytest
+PyJWT
+faster-whisper

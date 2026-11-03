@@ -1,0 +1,77 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "email": "admin@documind.ai",
+      "pwHash": "0ef4a4dbd51c07a739874071c2224b86256ab0abbc105f4e631eb8ad827c5c90",
+      "salt": "b3bd2341f19e1e4ffafdc110378354b8",
+      "created": 1793388267094,
+      "role": "admin",
+      "status": "active"
+    },
+    {
+      "id": "admin-harsh-1",
+      "email": "admin@harsh.ai",
+      "pwHash": "3ed96453ab9df50a9c212eb6e382ba5a0d50db15aefc4f70eb93684ac66c77db",
+      "salt": "decf9f8da2362bfa24fd34c8f6941c29",
+      "created": 1793392757891,
+      "role": "admin",
+      "status": "active",
+      "actionCount": 3,
+      "lastLogin": 1793392797904
+    }
+  ],
+  "resets": [],
+  "events": [
+    {
+      "id": "4512bf1d-30c1-48a3-9d7c-dae28bb8c904",
+      "email": "admin@documind.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793388279987
+    },
+    {
+      "id": "c2a65c9b-c883-43b6-9c2c-56a86b45f76f",
+      "email": "admin@documind.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793388539994
+    },
+    {
+      "id": "ec2de37d-b780-4a67-be0e-18ca5eeeadab",
+      "email": "admin@documind.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793388547900
+    },
+    {
+      "id": "cbdfe76d-b4dd-40c8-b072-73f022220ead",
+      "email": "admin@documind.ai",
+      "event": "auth",
+      "path": "/auth/me",
+      "created": 1793388547905
+    },
+    {
+      "id": "337261c6-1bd3-48a0-b76b-446216498ec4",
+      "email": "admin@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793392792531
+    },
+    {
+      "id": "4550f4b6-b557-4057-aa3a-7658ac0acfe1",
+      "email": "admin@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793392797904
+    },
+    {
+      "id": "428e4a8d-6c1f-40f4-a50c-c0832512530a",
+      "email": "admin@harsh.ai",
+      "event": "api",
+      "path": "/api/admin/overview",
+      "created": 1793392797920
+    }
+  ],
+  "examples": []
+}

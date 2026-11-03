@@ -1,0 +1,11 @@
+{
+  "name": "Remix DocuMind AI",
+  "description": "Full-Featured Intelligent Document Suite with Advanced PDF Editor, Voice Control, AI Assistant, and PDF Tools",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

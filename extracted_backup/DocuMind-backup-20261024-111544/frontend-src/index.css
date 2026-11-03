@@ -1,0 +1,56 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+@layer base{html,body,#root{height:100%}
+ body{@apply bg-[#f1f6f8] text-[#15323f] antialiased font-sans}
+ h1,h2,h3{@apply text-[#0b2536] tracking-tight}
+ *:focus-visible{@apply outline outline-2 outline-offset-2 outline-brand-500}
+ ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(88,116,127,.35);border-radius:999px;border:2px solid transparent;background-clip:content-box}::-webkit-scrollbar-thumb:hover{background:rgba(88,116,127,.55);background-clip:content-box;border:2px solid transparent}
+ @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}}
+/* Dark surfaces (PDF editor, voice studio, sign-in). Everything else uses the light dashboard theme. */
+.app-dark{background:#0b1220;color:#e2e8f0}
+.app-dark h1,.app-dark h2,.app-dark h3{color:#f8fafc}
+@layer components{
+ .card{@apply rounded-2xl border border-[#e1ecef] bg-white p-5 shadow-card}
+ .card-hover{@apply transition duration-150 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-soft}
+ .btn{@apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border border-[#d3e3e8] bg-white text-[#14394a] hover:bg-[#f0f7f9] active:scale-[.98] transition disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]}
+ .btn-p{@apply border-transparent bg-brand-800 text-white hover:bg-brand-700}
+ .input{@apply w-full rounded-xl border border-[#cfe0e5] bg-white px-3.5 py-2.5 text-sm text-[#15323f] placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 outline-none transition min-h-[44px]}
+ .lbl{@apply block text-xs font-medium text-slate-600 mb-1.5}
+ .tbtn{@apply inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 text-slate-600 transition hover:bg-slate-200/70 hover:text-slate-900 active:scale-95 disabled:cursor-not-allowed disabled:opacity-35}
+ .tbtn-on{@apply border-brand-500/50 bg-brand-600/15 text-brand-800}
+ .tbtn-primary{@apply border-transparent bg-brand-700 text-white hover:bg-brand-600}
+ .chip{@apply inline-flex items-center rounded-full border border-[#cfe0e5] bg-white px-3 py-1 text-xs text-slate-600 transition hover:border-brand-500/60 hover:bg-brand-50 hover:text-brand-800 disabled:cursor-not-allowed disabled:opacity-40}
+ .glass-bar{@apply border-b border-[#e1ecef] bg-white}
+ .seg{@apply flex shrink-0 items-center gap-0.5 rounded-lg border border-[#e1ecef] bg-[#f4f9fa] p-0.5}
+ .badge{@apply inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-600/10 px-3 py-1 text-xs font-medium text-brand-800}
+ /* dark variants */
+ .app-dark .card{@apply border-slate-700/50 bg-[#111a2e] shadow-sm}
+ .app-dark .card-hover{@apply hover:border-brand-500/60 hover:bg-[#14203a] hover:shadow-none}
+ .app-dark .btn{@apply border-slate-600/50 bg-slate-800/60 text-slate-100 hover:bg-slate-700/70}
+ .app-dark .btn-p{@apply border-transparent bg-brand-600 text-white hover:bg-brand-500}
+ .app-dark .input{@apply border-slate-600/50 bg-[#0b1220] text-slate-100 placeholder:text-slate-500}
+ .app-dark .lbl{@apply text-slate-400}
+ .app-dark .tbtn{@apply text-slate-300 hover:bg-slate-700/60 hover:text-white}
+ .app-dark .tbtn-on{@apply border-brand-500/50 bg-brand-600/25 text-brand-200}
+ .app-dark .tbtn-primary{@apply bg-brand-600 hover:bg-brand-500}
+ .app-dark .chip{@apply border-slate-600/50 bg-slate-800/50 text-slate-300 hover:bg-brand-600/15 hover:text-brand-200}
+ .app-dark .glass-bar{@apply border-slate-700/50 bg-[#0e1628]}
+ .app-dark .seg{@apply border-slate-700/50 bg-slate-800/40}
+ .app-dark .badge{@apply bg-brand-600/10 text-brand-200}
+}
+/* Light theme: re-map the slate/white utilities that the older pages were written with (dark-first). */
+.app-light .text-slate-50,.app-light .text-slate-100,.app-light .text-slate-200{color:#15323f}
+.app-light .text-slate-300{color:#2c4f5f}
+.app-light .text-slate-400{color:#58747f}
+.app-light .text-slate-500{color:#6d8792}
+.app-light .text-white{color:#0b2536}
+.app-light .btn-p,.app-light .btn-p *,.app-light .tbtn-primary,.app-light .tbtn-primary *{color:#fff}
+.app-light .text-brand-200,.app-light .text-brand-300,.app-light .text-brand-400{color:#0c6f73}
+.app-light .text-teal-300{color:#0f766e}
+.app-light .text-red-300,.app-light .text-red-400{color:#b91c1c}
+.app-light .text-rose-300{color:#be123c}
+.app-light .text-emerald-400{color:#047857}
+.app-light .text-amber-200{color:#92400e}
+.app-light [class*="border-slate-"],.app-light [class*="border-white/"]{border-color:#dbe7ea}
+.app-light [class^="bg-slate-"],.app-light [class*=" bg-slate-"]{background-color:#eef5f7}
+.app-light [class*="divide-slate"]>*+*{border-color:#e3edf0}
+.app-light input[type=file]::file-selector-button{background:#e4f1f3;color:#14394a;border:0}
