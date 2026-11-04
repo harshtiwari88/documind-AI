@@ -17,8 +17,48 @@
       "created": 1793392757891,
       "role": "admin",
       "status": "active",
-      "actionCount": 3,
-      "lastLogin": 1793392797904
+      "actionCount": 4,
+      "lastLogin": 1793760975988,
+      "name": "Harsh Admin"
+    },
+    {
+      "id": "user-demo-1",
+      "email": "user@harsh.ai",
+      "name": "Demo User",
+      "pwHash": "2d2852cef7389630ed7ca0fb8375d90de9ccff4c96c42ccdc330927a46dbffff",
+      "salt": "4a43b1ff1922aaf169de64acaeac7ddb",
+      "created": 1793760968270,
+      "role": "user",
+      "status": "active",
+      "actionCount": 1,
+      "twoFactorEnabled": false,
+      "lastLogin": 1793760976048
+    },
+    {
+      "id": "b8053bd9-a43c-4a6c-89b7-ed67cca9014b",
+      "email": "testuser_1793760976051@test.com",
+      "name": "Test User",
+      "pwHash": "9ca4615424af080dac739791330f8794f74e82ffebeaf36a801669468b6f09b4",
+      "salt": "ca222cf24aa526403e314ce17b00c110",
+      "created": 1793760976095,
+      "role": "user",
+      "status": "active",
+      "actionCount": 1,
+      "twoFactorEnabled": false
+    },
+    {
+      "id": "33df698d-4c08-4c75-b5c4-04ea64c690bc",
+      "email": "test2wa_1793760976098@test.com",
+      "name": "2WA User",
+      "pwHash": "2f71c714e485dade26a4ced66bbfb34eb5abd638cadfa5450a4666d19a30cdbe",
+      "salt": "275a51b255847ac63be375b513c9d30e",
+      "created": 1793760976148,
+      "role": "user",
+      "status": "active",
+      "actionCount": 2,
+      "twoFactorEnabled": true,
+      "twoFactorSecret": "4D96824D",
+      "lastLogin": 1793760976265
     }
   ],
   "resets": [],
@@ -71,6 +111,41 @@
       "event": "api",
       "path": "/api/admin/overview",
       "created": 1793392797920
+    },
+    {
+      "id": "fef3d0a4-f5ba-45a0-8141-5adf1bd05c89",
+      "email": "admin@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793760975989
+    },
+    {
+      "id": "6aa3f80d-bdbe-4246-b1b8-2ac1fa286422",
+      "email": "user@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793760976048
+    },
+    {
+      "id": "25960bdd-a324-488e-b68c-0434d81277ef",
+      "email": "testuser_1793760976051@test.com",
+      "event": "register",
+      "path": "/auth/register",
+      "created": 1793760976095
+    },
+    {
+      "id": "b752d414-4d8b-4eed-8106-17d35034cb6a",
+      "email": "test2wa_1793760976098@test.com",
+      "event": "register",
+      "path": "/auth/register",
+      "created": 1793760976148
+    },
+    {
+      "id": "0ceb326e-a9df-4d28-964b-323f455aee08",
+      "email": "test2wa_1793760976098@test.com",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793760976265
     }
   ],
   "examples": []

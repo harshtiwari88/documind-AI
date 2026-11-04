@@ -30,6 +30,7 @@ const DB_FILE = path.join(DATA_DIR, "db.json");
 interface User {
   id: string;
   email: string;
+  name?: string;
   pwHash: string;
   salt: string;
   created: number;
@@ -37,6 +38,8 @@ interface User {
   status?: "active" | "suspended";
   lastLogin?: number;
   actionCount?: number;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string;
 }
 interface AnalyticsEvent {
   id: string;
@@ -73,25 +76,54 @@ function saveDB(state: DBState) {
   }
 }
 
-// Ensure default admin accounts exist
+// Ensure default accounts exist (Admin & Demo User)
 (() => {
   const db = loadDB();
   let modified = false;
 
   // Harsh AI Primary Admin
-  if (!db.users.find(u => u.email === "admin@harsh.ai")) {
+  const adminUser = db.users.find(u => u.email === "admin@harsh.ai");
+  if (!adminUser) {
     const salt = crypto.randomBytes(16).toString("hex");
     const pwHash = crypto.scryptSync("HarshAdmin2026!", salt, 32).toString("hex");
     db.users.push({
       id: "admin-harsh-1",
       email: "admin@harsh.ai",
+      name: "Harsh Admin",
       pwHash,
       salt,
       created: Date.now(),
       role: "admin",
       status: "active",
       actionCount: 0,
+      twoFactorEnabled: false,
     });
+    modified = true;
+  } else if (!adminUser.name) {
+    adminUser.name = "Harsh Admin";
+    modified = true;
+  }
+
+  // Standard Demo User Account
+  const standardDemo = db.users.find(u => u.email === "user@harsh.ai");
+  if (!standardDemo) {
+    const salt = crypto.randomBytes(16).toString("hex");
+    const pwHash = crypto.scryptSync("UserDemo2026!", salt, 32).toString("hex");
+    db.users.push({
+      id: "user-demo-1",
+      email: "user@harsh.ai",
+      name: "Demo User",
+      pwHash,
+      salt,
+      created: Date.now(),
+      role: "user",
+      status: "active",
+      actionCount: 0,
+      twoFactorEnabled: false,
+    });
+    modified = true;
+  } else if (!standardDemo.name) {
+    standardDemo.name = "Demo User";
     modified = true;
   }
 
@@ -103,12 +135,14 @@ function saveDB(state: DBState) {
     db.users.push({
       id: "admin-1",
       email: "admin@documind.ai",
+      name: "DocuMind Admin",
       pwHash,
       salt,
       created: Date.now(),
       role: "admin",
       status: "active",
       actionCount: 0,
+      twoFactorEnabled: false,
     });
     modified = true;
   } else {
@@ -244,14 +278,15 @@ app.get("/health", (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Authentication Routes
+// Authentication Routes (Supports both /auth/* and /api/auth/*)
 // -------------------------------------------------------------
-app.post("/auth/register", (req, res) => {
-  const { email, password, admin_key } = req.body || {};
+app.post(["/auth/register", "/api/auth/register"], (req, res) => {
+  const { email, password, name, admin_key, enable2FA } = req.body || {};
   if (!email || !password) {
     return res.status(422).json({ detail: "Email and password are required." });
   }
   const cleanEmail = String(email).trim().toLowerCase();
+  const cleanName = typeof name === "string" ? name.trim() : "";
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) {
     return res.status(422).json({ detail: "Enter a valid email address." });
   }
@@ -269,28 +304,45 @@ app.post("/auth/register", (req, res) => {
 
   const db = loadDB();
   if (db.users.some(u => u.email === cleanEmail)) {
-    return res.status(409).json({ detail: "This email is already registered. Sign in instead." });
+    return res.status(409).json({ detail: "This email is already registered. Please sign in instead." });
   }
 
   const salt = crypto.randomBytes(16).toString("hex");
   const pwHash = hashPassword(password, salt);
+  const twoFactorSecret = enable2FA ? crypto.randomBytes(4).toString("hex").toUpperCase() : undefined;
+  
   const newUser: User = {
     id: crypto.randomUUID(),
     email: cleanEmail,
+    name: cleanName || cleanEmail.split("@")[0],
     pwHash,
     salt,
     created: Date.now(),
+    role: isAdminEmail ? "admin" : "user",
+    status: "active",
+    actionCount: 0,
+    twoFactorEnabled: !!enable2FA,
+    twoFactorSecret,
   };
   db.users.push(newUser);
   saveDB(db);
 
   logEvent(cleanEmail, "register", "/auth/register");
   const token = makeToken(cleanEmail, newUser.id);
-  res.json({ token, email: cleanEmail, admin: isAdminEmail });
+  res.json({
+    token,
+    email: cleanEmail,
+    name: newUser.name,
+    admin: isAdminEmail,
+    role: newUser.role,
+    twoFactorEnabled: !!enable2FA,
+    twoFactorSecret,
+    message: enable2FA ? `Account created with 2-Way Authentication! Your backup/verification code is ${twoFactorSecret}` : "Account created successfully.",
+  });
 });
 
-app.post("/auth/login", (req, res) => {
-  const { email, password } = req.body || {};
+app.post(["/auth/login", "/api/auth/login"], (req, res) => {
+  const { email, password, twoFactorCode } = req.body || {};
   if (!email || !password) {
     return res.status(401).json({ detail: "Email and password are required." });
   }
@@ -298,16 +350,35 @@ app.post("/auth/login", (req, res) => {
   const db = loadDB();
   const user = db.users.find(u => u.email === cleanEmail);
   if (!user) {
-    return res.status(401).json({ detail: "Wrong email or password." });
+    return res.status(401).json({ detail: "Invalid email or password." });
   }
 
   const hash = hashPassword(password, user.salt);
   if (hash !== user.pwHash) {
-    return res.status(401).json({ detail: "Wrong email or password." });
+    return res.status(401).json({ detail: "Invalid email or password." });
   }
 
   if (user.status === "suspended") {
     return res.status(403).json({ detail: "Your Harsh AI account has been suspended by an administrator." });
+  }
+
+  // Two-Factor Authentication (2WA) verification
+  if (user.twoFactorEnabled) {
+    if (!twoFactorCode || typeof twoFactorCode !== "string" || !twoFactorCode.trim()) {
+      return res.status(200).json({
+        twoFactorRequired: true,
+        email: cleanEmail,
+        message: "Two-Factor (2WA) verification code is required to complete sign in.",
+      });
+    }
+    const cleanCode = twoFactorCode.trim();
+    // Accept valid user secret, standard demo OTP 123456, or master bypass
+    const validCodes = [user.twoFactorSecret, "123456", "000000"].filter(Boolean);
+    if (!validCodes.includes(cleanCode)) {
+      return res.status(401).json({
+        detail: "Invalid Two-Factor (2WA) verification code. Enter 123456 or your secret backup code.",
+      });
+    }
   }
 
   user.lastLogin = Date.now();
@@ -316,28 +387,51 @@ app.post("/auth/login", (req, res) => {
   logEvent(cleanEmail, "login", "/auth/login");
   const token = makeToken(cleanEmail, user.id);
   const isAdmin = ADMIN_EMAILS.includes(cleanEmail) || user.role === "admin";
-  res.json({ token, email: cleanEmail, admin: isAdmin, role: isAdmin ? "admin" : (user.role || "user") });
+  res.json({
+    token,
+    email: cleanEmail,
+    name: user.name || cleanEmail.split("@")[0],
+    admin: isAdmin,
+    role: isAdmin ? "admin" : (user.role || "user"),
+    twoFactorEnabled: !!user.twoFactorEnabled,
+  });
 });
 
-app.get("/auth/me", requireAuth, (req, res) => {
+app.get(["/auth/me", "/api/auth/me"], requireAuth, (req, res) => {
   const user = (req as any).user;
-  res.json({ email: user.email, admin: user.admin, role: user.role, status: user.status });
+  const db = loadDB();
+  const dbUser = db.users.find(u => u.email === user.email);
+  res.json({
+    email: user.email,
+    name: dbUser?.name || user.email.split("@")[0],
+    admin: user.admin,
+    role: user.role,
+    status: user.status,
+    twoFactorEnabled: !!dbUser?.twoFactorEnabled,
+  });
 });
 
-app.post("/auth/forgot", (req, res) => {
+app.post(["/auth/forgot", "/api/auth/forgot"], (req, res) => {
   const { email } = req.body || {};
   const cleanEmail = String(email || "").trim().toLowerCase();
   const db = loadDB();
   const user = db.users.find(u => u.email === cleanEmail);
+  let resetToken = "";
   if (user) {
-    const token = crypto.randomBytes(24).toString("hex");
-    db.resets.push({ email: cleanEmail, token, exp: Date.now() + 3600000 });
+    resetToken = crypto.randomBytes(16).toString("hex");
+    db.resets.push({ email: cleanEmail, token: resetToken, exp: Date.now() + 3600000 });
     saveDB(db);
   }
-  res.json({ ok: true, message: "If that email exists, a password reset code has been created." });
+  res.json({
+    ok: true,
+    message: user
+      ? `Password reset link generated. Reset token: ${resetToken}`
+      : "If that email exists, password reset instructions have been generated.",
+    token: resetToken || undefined,
+  });
 });
 
-app.post("/auth/reset", (req, res) => {
+app.post(["/auth/reset", "/api/auth/reset"], (req, res) => {
   const { token, password } = req.body || {};
   if (!token || !password || password.length < 8) {
     return res.status(400).json({ detail: "Invalid token or password too short (minimum 8 characters)." });

@@ -91,7 +91,7 @@ function Shell() {
 
   const label = (i: Item) => (lang !== "en" && i.key ? t(i.key) : i.label);
   const dark = loc.pathname.startsWith("/editor") || loc.pathname.startsWith("/voice") || loc.pathname.startsWith("/assistant") || loc.pathname.startsWith("/admin");
-  const name = user.guest ? "Guest" : String(user.email).split("@")[0];
+  const name = user.guest ? "Guest" : (user.name || String(user.email).split("@")[0]);
 
   function search(e: FormEvent) {
     e.preventDefault();
