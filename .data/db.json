@@ -17,8 +17,8 @@
       "created": 1793392757891,
       "role": "admin",
       "status": "active",
-      "actionCount": 4,
-      "lastLogin": 1793760975988,
+      "actionCount": 5,
+      "lastLogin": 1793823302637,
       "name": "Harsh Admin"
     },
     {
@@ -30,9 +30,9 @@
       "created": 1793760968270,
       "role": "user",
       "status": "active",
-      "actionCount": 1,
+      "actionCount": 3,
       "twoFactorEnabled": false,
-      "lastLogin": 1793760976048
+      "lastLogin": 1793824099639
     },
     {
       "id": "b8053bd9-a43c-4a6c-89b7-ed67cca9014b",
@@ -146,6 +146,27 @@
       "event": "login",
       "path": "/auth/login",
       "created": 1793760976265
+    },
+    {
+      "id": "e4b970de-6ea5-40a3-9417-410f43c93b0a",
+      "email": "admin@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793823302638
+    },
+    {
+      "id": "abe6baf9-ab50-4130-9e27-870aeddb5b2c",
+      "email": "user@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793823302716
+    },
+    {
+      "id": "dfbf8eff-be7d-43f6-a9f1-dbb54a7797cb",
+      "email": "user@harsh.ai",
+      "event": "login",
+      "path": "/auth/login",
+      "created": 1793824099640
     }
   ],
   "examples": []

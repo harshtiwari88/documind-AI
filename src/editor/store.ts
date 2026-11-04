@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import { save as saveBlob, postJson } from "../lib/api";
 import { add as addDocument, validate } from "../lib/docs";
+import { safeStorage } from "../lib/safeStorage";
 import { analyze, buildPdf, dataUrlToBytes, loadPdf, readSizes, sampleColors } from "./engine";
 import type { SrcDoc } from "./engine";
 import { autosaveDocumentKey } from "./autosaveKey";
@@ -9,6 +10,7 @@ import { normalizeLinkUrl } from "./linkUtils";
 import { describe, fillClarification, parseCommand, HELP } from "./commands";
 import type { Cmd, Need, ParseCtx } from "./commands";
 import type { Align, Analysis, Ann, Block, DocOpts, FontKey, Fmt, ImgData, Line, PageState, ShapeKind, TextAnn, Tool } from "./types";
+import { FontMatchResult, matchFontAttributes, matchLineFont, matchBlockFont } from "./fontMatcher";
 
 export interface Toast { id: number; kind: "ok" | "err" | "info"; text: string; action?: { label: string; run: () => void } }
 export interface VoiceEntry { id: number; heard: string; interpreted: string; status: "running" | "done" | "error" | "confirm" | "clarify" | "cancelled"; message: string; source: "voice" | "text" | "ai"; cmd?: Cmd }
@@ -21,6 +23,7 @@ export interface State {
   history: string[]; hasUni: boolean; mic: MicState; log: VoiceEntry[];
   pending: { cmd: Cmd; entry: number } | null; clarify: { question: string; partial: Cmd; need: Need; entry: number } | null; autoNotice: boolean;
   voiceMode: "auto" | "convo" | "edit"; ttsEnabled: boolean;
+  fontMatch: FontMatchResult | null;
 }
 export interface Exec { ok: boolean; message: string }
 export interface LineRef { page: number; line: Line; block?: Block; rect?: { x: number; w: number } }
@@ -43,6 +46,7 @@ class EditorStore {
     fmt: { ...DEFAULT_FMT }, opts: { ...DEFAULT_OPTS }, busy: null, toast: null, preview: false, previewBusy: false, previewVer: 0, canUndo: false, canRedo: false, version: 0,
     sigOpen: false, hits: {}, hint: HINTS.select, panel: "format", history: [], hasUni: false, mic: { state: "idle", interim: "", error: "", handsFree: false }, log: [], pending: null, clarify: null, autoNotice: false,
     voiceMode: "auto", ttsEnabled: true,
+    fontMatch: null,
   };
   private listeners = new Set<() => void>();
   docs: SrcDoc[] = []; images = new Map<string, ImgData>(); previewDoc: SrcDoc | null = null;
@@ -203,9 +207,20 @@ class EditorStore {
   setTool(t: Tool) { this.emit({ tool: t, editing: null, hint: HINTS[t], ...(t !== "select" ? { selBlock: null } : {}) }, true); if (["select", "edit", "erase", "hl", "ul", "st"].includes(t)) this.loadAnalysis(this.s.cur); }
   setPanel(p: State["panel"]) { this.emit({ panel: p }, true); }
   select(id: number | null) { const a = id != null ? this.findAnn(id)?.a : null; const f: Partial<Fmt> = {};
-    if (a?.t === "text") Object.assign(f, { font: a.font, size: a.size, color: a.color, bold: a.bold, italic: a.italic, underline: a.underline, align: a.align });
-    this.emit({ sel: id, selBlock: null, editing: null, fmt: { ...this.s.fmt, ...f }, ...(id != null ? { panel: "format" as const } : {}) }, true); }
-  selectBlock(page: number, id: string | null) { this.emit({ selBlock: id ? { page, id } : null, sel: null, editing: null, ...(id ? { panel: "format" as const } : {}) }, true); }
+    let fontMatch: FontMatchResult | null = null;
+    if (a?.t === "text") {
+      Object.assign(f, { font: a.font, size: a.size, color: a.color, bold: a.bold, italic: a.italic, underline: a.underline, align: a.align });
+      fontMatch = matchFontAttributes({ fam: a.font, size: a.size, bold: a.bold, italic: a.italic, color: a.color });
+    }
+    this.emit({ sel: id, selBlock: null, editing: null, fontMatch, fmt: { ...this.s.fmt, ...f }, ...(id != null ? { panel: "format" as const } : {}) }, true); }
+  selectBlock(page: number, id: string | null) {
+    let fontMatch: FontMatchResult | null = null;
+    if (id) {
+      const b = this.peek(page)?.blocks.find(x => x.id === id);
+      if (b) fontMatch = matchBlockFont(b);
+    }
+    this.emit({ selBlock: id ? { page, id } : null, sel: null, editing: null, fontMatch, ...(id ? { panel: "format" as const } : {}) }, true);
+  }
   findAnn(id: number) { for (const p of this.s.pages) { const a = p.a.find(x => x.id === id); if (a) return { p, a }; } return null; }
   startEdit(id: number) { this.editSnapped = false; this.emit({ editing: id, sel: id }, true); }
   liveText(id: number, text: string) { const f = this.findAnn(id); if (!f || (f.a.t !== "text" && f.a.t !== "note")) return; if (!this.editSnapped) { this.checkpoint("Edit text"); this.editSnapped = true; } f.a.text = text; this.emit({}, false); this.autosave(); }
@@ -331,8 +346,30 @@ class EditorStore {
   private findLineAnn(pageIdx: number, l: Line) { return this.s.pages[pageIdx].a.find(a => a.t === "text" && a.ref === lineKey(l)) as TextAnn | undefined; }
   async editLine(pageIdx: number, l: Line) {
     let a = this.findLineAnn(pageIdx, l);
-    if (!a) { const c = await this.lineStyle(pageIdx, l); a = this.lineAnn(pageIdx, l, c); this.addAnn(pageIdx, a, "Edit text"); }
-    this.emit({ sel: a.id, editing: a.id, tool: "select", hint: HINTS.select }, true); this.editSnapped = true;
+    const c = await this.lineStyle(pageIdx, l);
+    const matched = matchLineFont(l, c);
+    if (!a) { a = this.lineAnn(pageIdx, l, c); this.addAnn(pageIdx, a, "Edit text"); }
+    this.emit({ sel: a.id, editing: a.id, tool: "select", hint: HINTS.select, fontMatch: matched }, true); this.editSnapped = true;
+    this.toast("ok", `🎯 Matched Font: ${matched.matchedStandardFontName} (${matched.confidence}%) · ${matched.size}pt`);
+  }
+  applyMatchedFont(matched: FontMatchResult) {
+    this.setFmt({
+      font: matched.matchedStandardFont,
+      size: Math.round(matched.size),
+      bold: matched.bold,
+      italic: matched.italic,
+      color: matched.fgColor,
+    });
+    if (this.s.sel != null) {
+      this.styleAnn(this.findAnn(this.s.sel)?.a, {
+        font: matched.matchedStandardFont,
+        size: Math.round(matched.size),
+        bold: matched.bold,
+        italic: matched.italic,
+        color: matched.fgColor,
+      });
+    }
+    this.toast("ok", `Applied matched ${matched.matchedStandardFontName} (${matched.size}pt, ${matched.fgColor})`);
   }
   async restyleLines(refs: LineRef[], patch: Record<string, any>, label: string) {
     const made: [number, TextAnn][] = [], touched: TextAnn[] = [], seen = new Set<string>();
@@ -360,12 +397,14 @@ class EditorStore {
     const lines = b.lines || [];
     const first = lines[0] || { x: b.x, y: b.y, w: b.w, h: b.h, s: b.size || 12, base: b.y + (b.size || 12), str: b.text, font: "helv", bold: false, italic: false };
     const c = await this.lineStyle(pageIdx, first), cover = { x: b.x, y: b.y, w: b.w, h: b.h, color: c.bg };
+    const matched = matchBlockFont(b, c);
     // Checkpoint before removing any existing overlays so Undo restores the exact prior state.
     this.checkpoint("Replace text");
     this.s.pages[pageIdx].a = this.s.pages[pageIdx].a.filter(a => !(a.t === "text" && a.ref && lines.some(l => lineKey(l) === a.ref)) && !(a.t === "erase" && a.ref && lines.some(l => lineKey(l) === a.ref)));
-    const a: TextAnn = { id: this.newId(), t: "text", x: b.x, y: first.base - 0.95 * first.s, w: b.w, text, font: first.font, size: first.s, color: c.fg, bold: first.bold, italic: first.italic, underline: false, align: "left", cover, ref: lineKey(first), role: b.kind === "paragraph" ? undefined : "heading" };
+    const a: TextAnn = { id: this.newId(), t: "text", x: b.x, y: first.base - 0.95 * first.s, w: b.w, text, font: matched.matchedStandardFont, size: matched.size, color: matched.fgColor, bold: matched.bold, italic: matched.italic, underline: false, align: "left", cover, ref: lineKey(first), role: b.kind === "paragraph" ? undefined : "heading" };
     this.s.pages[pageIdx].a.push(a); this.s.sel = a.id; this.s.selBlock = null;
-    this.emit({ tool: "select", editing: a.id, hint: HINTS.select }); this.editSnapped = true; this.autosave();
+    this.emit({ tool: "select", editing: a.id, hint: HINTS.select, fontMatch: matched }); this.editSnapped = true; this.autosave();
+    this.toast("ok", `Seamlessly replaced with font-matched ${matched.matchedStandardFontName} (${matched.size}pt)`);
   }
 
   /* markup */
@@ -662,7 +701,7 @@ class EditorStore {
       }
       case "add_comment": { const i = c.page ? this.idx(c.page) : S.cur; const n = S.pages[i].a.filter(a => a.t === "note").length; this.addAnn(i, { id: this.newId(), t: "note", x: 40, y: 40 + n * 56, text: c.text || "Comment" }, "Add comment"); this.goTo(i); return ok(`Added a comment on page ${i + 1}.`); }
       case "add_shape": { const i = c.page ? this.idx(c.page) : S.cur, p = S.pages[i], k = c.shape || "rect"; this.addAnn(i, { id: this.newId(), t: "shape", k, x1: p.w * 0.25, y1: p.h * 0.3, x2: p.w * 0.75, y2: p.h * (k === "line" || k === "arrow" ? 0.3 : 0.42), stroke: c.color || S.fmt.stroke, fill: S.fmt.fill, sw: S.fmt.sw }, "Add shape"); this.goTo(i); return ok(`Added ${k === "ell" ? "an ellipse" : k === "rect" ? "a rectangle" : "a " + k} on page ${i + 1}. Drag to move it; use the handles to resize.`); }
-      case "add_signature": { const i = c.page ? this.idx(c.page) : S.cur; this.goTo(i); const saved = localStorage.getItem("dm_signature");
+      case "add_signature": { const i = c.page ? this.idx(c.page) : S.cur; this.goTo(i); const saved = safeStorage.getItem("dm_signature");
         if (saved) { await this.addSignature(saved, i); return ok(`Placed your saved signature on page ${i + 1}. Drag it into position.`); } this.openSignature(true); return ok("Signature pad opened. Draw or type your signature, then tap Use signature. Voice can't draw it for you."); }
       case "add_image": this.emit({ hint: "Tap the Image button in the toolbar to choose a file." }, true); return ok("Tap the Image button in the toolbar. Browsers don't let voice commands open the file picker, so this one step is manual.");
       case "crop_image": { const id = S.sel; if (id == null || this.findAnn(id)?.a.t !== "img") throw new Error("Select the image you want to crop first."); await this.cropImage(id, c.crop || [0, 0, 0, 0]); return ok("Cropped the image."); }
@@ -747,7 +786,7 @@ class EditorStore {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           try {
             const vocal = new SpeechSynthesisUtterance(r.message.split(". ")[0]);
-            const vl = localStorage.getItem("dm_voice_lang");
+            const vl = safeStorage.getItem("dm_voice_lang");
             if (vl && vl !== "auto") vocal.lang = vl;
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(vocal);
@@ -822,7 +861,7 @@ class EditorStore {
           if (this.s.ttsEnabled && typeof window !== "undefined" && "speechSynthesis" in window) {
             try {
               const vocal = new SpeechSynthesisUtterance(r.spoken || r.reply.slice(0, 180));
-              const vl = localStorage.getItem("dm_voice_lang");
+              const vl = safeStorage.getItem("dm_voice_lang");
               if (vl && vl !== "auto") vocal.lang = vl;
               window.speechSynthesis.cancel();
               window.speechSynthesis.speak(vocal);
@@ -849,7 +888,7 @@ class EditorStore {
           if (r.spoken && this.s.ttsEnabled && typeof window !== "undefined" && "speechSynthesis" in window) {
             try {
               const vocal = new SpeechSynthesisUtterance(r.spoken);
-              const vl = localStorage.getItem("dm_voice_lang");
+              const vl = safeStorage.getItem("dm_voice_lang");
               if (vl && vl !== "auto") vocal.lang = vl;
               window.speechSynthesis.cancel();
               window.speechSynthesis.speak(vocal);

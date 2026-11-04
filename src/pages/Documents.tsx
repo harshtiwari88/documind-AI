@@ -19,6 +19,7 @@ import { kb, save } from "../lib/api";
 import { Icon } from "../editor/icons";
 import SmartSummarizerModal from "../components/SmartSummarizerModal";
 import CloudStoragePicker from "../components/CloudStoragePicker";
+import { safeStorage } from "../lib/safeStorage";
 
 type ModalState =
   | { type: "rename"; doc: Doc; name: string }
@@ -58,7 +59,7 @@ export default function Documents() {
 
   const hist: any[] = (() => {
     try {
-      return JSON.parse(localStorage.getItem("dm_hist") || "[]");
+      return JSON.parse(safeStorage.getItem("dm_hist") || "[]");
     } catch {
       return [];
     }

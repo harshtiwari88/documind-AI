@@ -1,13 +1,17 @@
+import { safeStorage } from "./safeStorage";
+
 const BASE = import.meta.env.VITE_API_URL ?? "";
 export const TOKEN_KEY = "dm_token";
 function authHeader(): Record<string, string> {
-  const t = localStorage.getItem(TOKEN_KEY);
+  const t = safeStorage.getItem(TOKEN_KEY);
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 async function check(r: Response) {
   if (r.ok) return;
   let m: any = r.statusText; try { const d = await r.json(); m = d.detail || m; if (Array.isArray(m)) m = "Please check the values you entered."; } catch {}
-  if (r.status === 401 && localStorage.getItem(TOKEN_KEY) && /Sign in required/.test(String(m))) { localStorage.removeItem(TOKEN_KEY); location.href = "/login"; }
+  if (r.status === 401 && safeStorage.getItem(TOKEN_KEY)) {
+    safeStorage.removeItem(TOKEN_KEY);
+  }
   throw new Error(String(m));
 }
 export async function post(path: string, form: FormData, blob = false): Promise<any> {
@@ -30,7 +34,7 @@ export async function getJson(path: string) {
   await check(r); return r.json();
 }
 export function save(blob: Blob, name: string) {
-  try { const h = JSON.parse(localStorage.getItem("dm_hist") || "[]"); h.unshift({ name, t: Date.now() }); localStorage.setItem("dm_hist", JSON.stringify(h.slice(0, 50))); } catch {}
+  try { const h = JSON.parse(safeStorage.getItem("dm_hist") || "[]"); h.unshift({ name, t: Date.now() }); safeStorage.setItem("dm_hist", JSON.stringify(h.slice(0, 50))); } catch {}
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }

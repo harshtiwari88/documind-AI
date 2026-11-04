@@ -19,6 +19,7 @@ import Reset from "./pages/Reset";
 import Admin from "./pages/Admin";
 import HarshRobot from "./components/HarshRobot";
 import { PWAInstallButton } from "./components/PWAInstallButton";
+import { safeStorage } from "./lib/safeStorage";
 
 type Item = { to: string; label: string; icon: string; key?: string; match: (p: string, sp: URLSearchParams) => boolean };
 const v = (sp: URLSearchParams) => sp.get("view") || "";
@@ -63,7 +64,7 @@ function Shell() {
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    purge(Number(localStorage.getItem("retention") || 0));
+    purge(Number(safeStorage.getItem("retention") || 0));
   }, []);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ function Shell() {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return null;
 
   const SUB = ["/documents?view=folders", "/documents?view=tags", "/documents?view=favorites", "/documents?view=bulk"];
   const inDocs = loc.pathname === "/documents";
@@ -265,25 +266,14 @@ function Shell() {
                       </Link>
                     )}
 
-                    {user.guest ? (
-                      <Link
-                        role="menuitem"
-                        to="/login"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-blue-600 hover:bg-slate-100"
-                      >
-                        <Icon n="logout" size={16} />
-                        Sign in
-                      </Link>
-                    ) : (
-                      <button
-                        role="menuitem"
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-sm text-[#15323f] hover:bg-slate-100"
-                        onClick={signOut}
-                      >
-                        <Icon n="logout" size={16} />
-                        {t("signOut")}
-                      </button>
-                    )}
+                    <button
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-start text-sm text-red-600 hover:bg-red-50"
+                      onClick={signOut}
+                    >
+                      <Icon n="logout" size={16} />
+                      {t("signOut")}
+                    </button>
                   </div>
                 </>
               )}
@@ -334,16 +324,48 @@ function Shell() {
 }
 
 export default function App() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="grid h-screen place-items-center bg-[#0b132b] text-cyan-400">
+        <div className="flex flex-col items-center gap-3">
+          <HarshRobot size={50} mood="thinking" />
+          <span className="text-sm font-medium animate-pulse">Loading Harsh AI…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If unauthenticated: First show Login & Register options!
+  // Dashboard and other options are only shown after logging in.
+  if (!user) {
+    return (
+      <Routes>
+        <Route
+          path="/reset"
+          element={
+            <div className="app-dark h-screen overflow-auto bg-[#0b132b]">
+              <Reset />
+            </div>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <div className="app-dark h-screen overflow-auto bg-[#0b132b]">
+              <Login />
+            </div>
+          }
+        />
+      </Routes>
+    );
+  }
+
+  // Once authenticated, show all options and full application workspace
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <div className="app-dark h-full overflow-auto bg-[#0b132b]">
-            <Login />
-          </div>
-        }
-      />
+      <Route path="/login" element={<Navigate to="/" replace />} />
       <Route
         path="/reset"
         element={
@@ -371,7 +393,7 @@ export default function App() {
           }
         />
       </Route>
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

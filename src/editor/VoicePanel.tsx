@@ -6,6 +6,7 @@ import { Spinner } from "./PageView";
 import { LANGS } from "../lib/langs";
 import { post, postJson } from "../lib/api";
 import { audioExtension, preferredRecorderMimeType } from "./audioRecording";
+import { safeStorage } from "../lib/safeStorage";
 
 const STATUS: Record<VoiceEntry["status"], { label: string; cls: string }> = {
   running: { label: "Processing…", cls: "bg-sky-500/15 text-sky-300 border-sky-500/30" },
@@ -148,9 +149,9 @@ function AudioWaveform({ active }: { active: boolean }) {
 
 export default function VoicePanel() {
   const S = useEditor();
-  const [lang, setLang] = useState(() => localStorage.getItem("dm_voice_lang") || "en-IN");
+  const [lang, setLang] = useState(() => safeStorage.getItem("dm_voice_lang") || "en-IN");
   const [text, setText] = useState("");
-  const [consent, setConsent] = useState(() => localStorage.getItem("dm_ai_consent") !== "0");
+  const [consent, setConsent] = useState(() => safeStorage.getItem("dm_ai_consent") !== "0");
   const [rec, setRec] = useState(false);
   const [wbusy, setWbusy] = useState(false);
   const mr = useRef<MediaRecorder | null>(null);
@@ -176,8 +177,8 @@ export default function VoicePanel() {
   const listening = m.state === "listening";
   const starting = m.state === "starting";
 
-  useEffect(() => { localStorage.setItem("dm_voice_lang", lang); }, [lang]);
-  useEffect(() => { localStorage.setItem("dm_ai_consent", consent ? "1" : "0"); }, [consent]);
+  useEffect(() => { safeStorage.setItem("dm_voice_lang", lang); }, [lang]);
+  useEffect(() => { safeStorage.setItem("dm_ai_consent", consent ? "1" : "0"); }, [consent]);
   useEffect(() => { logEnd.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [S.log.length, S.log[S.log.length - 1]?.status]);
 
   async function toggleMic() {

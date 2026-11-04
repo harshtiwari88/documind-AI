@@ -3,6 +3,7 @@ import { post, postJson } from "../lib/api";
 import { Doc, add, list } from "../lib/docs";
 import { Icon } from "../editor/icons";
 import HarshRobot from "../components/HarshRobot";
+import { safeStorage } from "../lib/safeStorage";
 
 interface Message {
   id: string;
@@ -30,7 +31,7 @@ export default function Assistant() {
   const [language, setLanguage] = useState<"auto" | "hinglish" | "english" | "hindi">("auto");
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
-      const saved = localStorage.getItem("harsh_ai_chat_history");
+      const saved = safeStorage.getItem("harsh_ai_chat_history");
       if (saved) return JSON.parse(saved);
     } catch {}
     return [
@@ -56,10 +57,10 @@ export default function Assistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, busy]);
 
-  // Persist chat history in localStorage
+  // Persist chat history in safeStorage
   useEffect(() => {
     try {
-      localStorage.setItem("harsh_ai_chat_history", JSON.stringify(messages));
+      safeStorage.setItem("harsh_ai_chat_history", JSON.stringify(messages));
     } catch {}
   }, [messages]);
 
@@ -195,7 +196,7 @@ export default function Assistant() {
       },
     ];
     setMessages(initial);
-    localStorage.removeItem("harsh_ai_chat_history");
+    safeStorage.removeItem("harsh_ai_chat_history");
   }
 
   function exportChat(format: "markdown" | "txt") {

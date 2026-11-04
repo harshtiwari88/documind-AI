@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { TOKEN_KEY, getJson, postJson } from "./api";
+import { safeStorage } from "./safeStorage";
 
 export interface AuthUser {
   email: string;
@@ -27,13 +28,13 @@ export const useAuth = () => useContext(Ctx)!;
 const GUEST: AuthUser = { email: "guest", name: "Guest User", guest: true, admin: false, role: "user" };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const hasToken = !!localStorage.getItem(TOKEN_KEY);
-  // Default to GUEST if no token, so public features work immediately
-  const [user, setUser] = useState<AuthUser | null>(hasToken ? null : GUEST);
+  const hasToken = !!safeStorage.getItem(TOKEN_KEY);
+  // Default to null so unauthenticated users see Login & Register first
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(hasToken);
 
   useEffect(() => {
-    if (!localStorage.getItem(TOKEN_KEY)) {
+    if (!safeStorage.getItem(TOKEN_KEY)) {
       setLoading(false);
       return;
     }
@@ -50,8 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       })
       .catch(() => {
-        localStorage.removeItem(TOKEN_KEY);
-        setUser(GUEST);
+        safeStorage.removeItem(TOKEN_KEY);
+        setUser(null);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return r;
     }
 
-    localStorage.setItem(TOKEN_KEY, r.token);
+    safeStorage.setItem(TOKEN_KEY, r.token);
     const u: AuthUser = {
       email: r.email,
       name: r.name || r.email.split("@")[0],
@@ -91,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (enable2FA) payload.enable2FA = enable2FA;
 
     const r = await postJson("/auth/register", payload);
-    localStorage.setItem(TOKEN_KEY, r.token);
+    safeStorage.setItem(TOKEN_KEY, r.token);
     const u: AuthUser = {
       email: r.email,
       name: r.name || name || r.email.split("@")[0],
@@ -106,12 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function signOut() {
-    localStorage.removeItem(TOKEN_KEY);
-    setUser(GUEST);
+    safeStorage.removeItem(TOKEN_KEY);
+    setUser(null);
   }
 
   function continueAsGuest() {
-    localStorage.removeItem(TOKEN_KEY);
+    safeStorage.removeItem(TOKEN_KEY);
     setUser(GUEST);
   }
 

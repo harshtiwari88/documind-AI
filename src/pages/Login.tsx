@@ -25,6 +25,7 @@ import { useAuth } from "../lib/auth";
 import { postJson } from "../lib/api";
 import HarshRobot from "../components/HarshRobot";
 import { usePWAInstall } from "../lib/usePWAInstall";
+import { safeStorage } from "../lib/safeStorage";
 
 const SAVED_EMAIL_KEY = "harsh_ai_saved_email";
 
@@ -38,7 +39,7 @@ export default function Login() {
 
   // Form Fields
   const [name, setName] = useState("");
-  const [email, setEmail] = useState(() => localStorage.getItem(SAVED_EMAIL_KEY) || "");
+  const [email, setEmail] = useState(() => safeStorage.getItem(SAVED_EMAIL_KEY) || "");
   const [pw, setPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -74,8 +75,8 @@ export default function Login() {
   const [forgotToken, setForgotToken] = useState("");
   const [forgotBusy, setForgotBusy] = useState(false);
 
-  // If already authenticated and not guest, redirect to dashboard
-  if (user && !user.guest) {
+  // If already authenticated, redirect to dashboard
+  if (user) {
     return <Navigate to="/" replace />;
   }
 
@@ -142,9 +143,9 @@ export default function Login() {
         }
 
         if (rememberMe) {
-          localStorage.setItem(SAVED_EMAIL_KEY, cleanEmail);
+          safeStorage.setItem(SAVED_EMAIL_KEY, cleanEmail);
         } else {
-          localStorage.removeItem(SAVED_EMAIL_KEY);
+          safeStorage.removeItem(SAVED_EMAIL_KEY);
         }
 
         setMascotMood("happy");
@@ -153,7 +154,7 @@ export default function Login() {
         // Register (Create Account)
         const result = await register(cleanEmail, pw, name, adminKey, enable2FA);
         if (rememberMe) {
-          localStorage.setItem(SAVED_EMAIL_KEY, cleanEmail);
+          safeStorage.setItem(SAVED_EMAIL_KEY, cleanEmail);
         }
         setSuccessMsg(
           enable2FA && result?.twoFactorSecret

@@ -13,6 +13,7 @@ import { localParse } from "../lib/localNav";
 import HarshRobot from "../components/HarshRobot";
 import SmartSummarizerModal from "../components/SmartSummarizerModal";
 import CloudStoragePicker from "../components/CloudStoragePicker";
+import { safeStorage } from "../lib/safeStorage";
 
 const TOOLS: [Tool, string, string][] = [
   ["select", "cursor", "Select"],
@@ -136,7 +137,7 @@ function SignaturePad() {
     const url = out.toDataURL("image/png");
     if (keep) {
       try {
-        localStorage.setItem("dm_signature", url);
+        safeStorage.setItem("dm_signature", url);
       } catch {
         /* storage full */
       }
